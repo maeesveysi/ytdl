@@ -114,9 +114,8 @@ jobs:
 
       - name: Start PO Token Server
         run: |
-          export PATH="$HOME/.local/bin:$PATH"
           echo "Starting bgutil-ytdlp-pot-provider server on port 8080..."
-          bgutil-ytdlp-pot-provider --port 8080 &
+          python3 -m bgutil_ytdlp_pot_provider --port 8080 &
           SERVER_PID=$!
           echo "Waiting for server to be ready..."
           for i in {1..15}; do
