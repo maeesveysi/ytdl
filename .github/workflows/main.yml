@@ -108,12 +108,29 @@ jobs:
           pip3 install --upgrade yt-dlp
           pip3 install bgutil-ytdlp-pot-provider
 
+          # Ensure local bin is in PATH for subsequent steps
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
       - name: Start PO Token Server
         run: |
+          export PATH="$HOME/.local/bin:$PATH"
           echo "Starting bgutil-ytdlp-pot-provider server on port 8080..."
           bgutil-ytdlp-pot-provider --port 8080 &
-          sleep 5
-          echo "PO Token server is running (PID $!)."
+          SERVER_PID=$!
+          echo "Waiting for server to be ready..."
+          for i in {1..15}; do
+            if curl -s http://127.0.0.1:8080/ping > /dev/null 2>&1; then
+              echo "PO Token server is ready (PID $SERVER_PID)."
+              break
+            fi
+            echo "Attempt $i/15 – server not ready yet, waiting..."
+            sleep 2
+          done
+          # Final check
+          if ! curl -s http://127.0.0.1:8080/ping > /dev/null 2>&1; then
+            echo "WARNING: PO Token server did not start properly. Downloads may fail."
+          fi
 
       - name: Download Setup (functions & config)
         env:
@@ -201,14 +218,14 @@ jobs:
             echo "Trying download method $METHOD..."
 
             if [ "$QUALITY" = "audio" ]; then
-              COMMON_FLAGS="--extract-audio --audio-format mp3 --audio-quality 0 --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
+              COMMON_FLAGS="--extract-audio --audio-format mp3 --audio-quality 0 --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline --ignore-errors"
               SUB_FLAGS=""
             elif [ "$QUALITY" = "best" ]; then
-              COMMON_FLAGS="--merge-output-format mp4 --format-sort res,+codec:vp9.1,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
-              SUB_FLAGS="--write-subs --write-auto-subs --sub-langs all --embed-subs --sleep-subtitles 2 --sleep-requests 1"
+              COMMON_FLAGS="--merge-output-format mp4 --format-sort res,+codec:vp9.1,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline --ignore-errors"
+              SUB_FLAGS="--write-subs --write-auto-subs --sub-langs all --embed-subs --sleep-subtitles 5 --sleep-requests 1"
             else
-              COMMON_FLAGS="--merge-output-format mp4 --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
-              SUB_FLAGS="--write-subs --write-auto-subs --sub-langs all --embed-subs --sleep-subtitles 2 --sleep-requests 1"
+              COMMON_FLAGS="--merge-output-format mp4 --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline --ignore-errors"
+              SUB_FLAGS="--write-subs --write-auto-subs --sub-langs all --embed-subs --sleep-subtitles 5 --sleep-requests 1"
             fi
 
             # Reordered: android_vr (METHOD 1) first – it gets the best quality without PO token
@@ -376,14 +393,14 @@ jobs:
             local TMP_DIR=$3
             echo "Trying download method $METHOD..."
             if [ "$QUALITY" = "audio" ]; then
-              COMMON_FLAGS="--extract-audio --audio-format mp3 --audio-quality 0 --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
+              COMMON_FLAGS="--extract-audio --audio-format mp3 --audio-quality 0 --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline --ignore-errors"
               SUB_FLAGS=""
             elif [ "$QUALITY" = "best" ]; then
-              COMMON_FLAGS="--merge-output-format mp4 --format-sort res,+codec:vp9.1,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
-              SUB_FLAGS="--write-subs --write-auto-subs --sub-langs all --embed-subs --sleep-subtitles 2 --sleep-requests 1"
+              COMMON_FLAGS="--merge-output-format mp4 --format-sort res,+codec:vp9.1,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline --ignore-errors"
+              SUB_FLAGS="--write-subs --write-auto-subs --sub-langs all --embed-subs --sleep-subtitles 5 --sleep-requests 1"
             else
-              COMMON_FLAGS="--merge-output-format mp4 --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
-              SUB_FLAGS="--write-subs --write-auto-subs --sub-langs all --embed-subs --sleep-subtitles 2 --sleep-requests 1"
+              COMMON_FLAGS="--merge-output-format mp4 --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline --ignore-errors"
+              SUB_FLAGS="--write-subs --write-auto-subs --sub-langs all --embed-subs --sleep-subtitles 5 --sleep-requests 1"
             fi
             case $METHOD in
               1)  # android_vr
